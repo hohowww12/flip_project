@@ -1825,6 +1825,16 @@ const _send18=A.sendRequest;A.sendRequest=function(){const d=S.draft;const insta
 /* ===== fix19: 되돌리기 어려운 동작은 한 번 더 묻고, 끝나면 앞 화면으로 ===== */
 A.unlinkChild=function(){sheet(`<b style="font-size:20px">자녀분과 연결을 끊을까요?</b><p class="t m" style="margin:0">끊으면 결제 요청과 수업 리포트가 자녀분께 가지 않아요. 나중에 다시 연결할 수 있어요</p>${btn('연결 끊기',ACT('unlinkDo'),'danger')}${btn('그대로 둘게요',ACT('closeSheet'),'sec')}`)};
 A.unlinkDo=function(){S.senior.childLinked=false;closeSheet();save();goBack();toast('자녀분과 연결을 끊었어요')};
+/* ===== fix20: 수업이 확정된 뒤 배움님께 "이제 뭘 하면 되는지" 안내 (직접 결제·자녀 결제 모두) ===== */
+let t20=null;function conf20(){clearTimeout(t20);t20=null;
+ if(S.page!=='s-home'||S.role!=='senior')return;
+ if(!S.seen||!S.seen.seniorHome||document.querySelector('.coach')){t20=setTimeout(conf20,800);return}
+ const b=active();if(!b||b.status!=='CONFIRMED')return;const key='conf_'+b.id;if(S.seen[key])return;
+ const by=b.paidBy==='child'?'자녀분이 결제해 주셔서 ':'';
+ tour([{sel:'.page h1',text:`<b>수업이 확정됐어요</b><br>${by}${when(b)}에 ${FR(b.friend).name} 프렌드가 와요. 하루 전과 1시간 전에 문자로 한 번 더 알려드려요`},
+  {sel:'.sa .li',text:'<b>수업 전에 미리 연습해 보세요</b><br>여기를 누르면 진짜처럼 연습할 수 있어요. 돈이 나가거나 택시가 오지 않아요'},
+  {sel:'.tabs button:nth-child(2), .side button:nth-of-type(2)',text:'<b>연습은 여기에 다 있어요</b><br>아래 "연습"을 누르면 모든 연습을 볼 수 있어요'}],key)}
+const _ar20=afterRender;afterRender=function(){_ar20();clearTimeout(t20);t20=setTimeout(conf20,500)};
 render(); /* 마지막 수정까지 반영해 첫 화면 다시 그리기 */
 </script>
 <script>

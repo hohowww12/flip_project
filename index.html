@@ -543,6 +543,32 @@ html.real .demohint,html.real [data-go="demo-login"]{display:none!important}
 body{word-break:keep-all;overflow-wrap:anywhere}
 .webfoot a{display:inline-block;padding:8px 4px}
 .page p a,.page .m a,.page label a{display:inline-block;padding:6px 2px}
+/* fix17 연습용 결제창 */
+.ck{position:fixed;inset:0;z-index:120;display:flex;align-items:flex-end;justify-content:center}
+.ck-dim{position:absolute;inset:0;background:rgba(17,24,39,.55)}
+.ck-w{position:relative;width:100%;max-width:480px;max-height:94dvh;background:#fff;border-radius:22px 22px 0 0;display:flex;flex-direction:column;overflow:hidden;animation:ckup .28s cubic-bezier(.2,.8,.2,1)}
+@media (min-width:700px){.ck{align-items:center}.ck-w{border-radius:22px;max-height:88vh}}
+@keyframes ckup{from{transform:translateY(40px);opacity:.4}}
+.ck-h{display:flex;align-items:center;padding:16px 18px;border-bottom:1px solid #F2F4F6}.ck-h b{font-size:18px}.ck-x{margin-left:auto;width:40px;height:40px;border-radius:50%;border:0;background:#F2F4F6;font-size:18px;cursor:pointer}
+.ck-b{flex:1;overflow:auto;padding:18px;display:flex;flex-direction:column;gap:14px}
+.ck-shop{display:flex;gap:12px;align-items:center}.ck-m{min-width:52px;height:52px;padding:0 8px;border-radius:14px;display:inline-flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;text-align:center;line-height:1.2}
+.ck-amt{display:flex;justify-content:space-between;align-items:baseline;background:#F7F8FA;border-radius:14px;padding:16px}.ck-amt b{font-size:28px;letter-spacing:-.5px}
+.ck-rows{display:flex;flex-direction:column;gap:8px}.ck-rows>div{display:flex;justify-content:space-between;gap:12px;font-size:15px}.ck-rows span{color:#6B7684}.ck-rows b{text-align:right}
+.ck-t{font-size:16px;margin-top:4px}
+.ck-cards{display:flex;flex-direction:column;gap:8px}.ck-card{display:flex;align-items:center;gap:12px;padding:14px;border-radius:14px;border:1.5px solid #E5E8EB;background:#fff;font:inherit;cursor:pointer;min-height:64px}.ck-card.on{border-color:#1F5BD8;background:#F3F7FF}
+.ck-chip{width:42px;height:28px;border-radius:6px;background:linear-gradient(135deg,#8B95A1,#4E5968);flex:none}
+.ck-rad{width:22px;height:22px;border-radius:50%;border:2px solid #D1D6DB;flex:none}.ck-card.on .ck-rad{border:7px solid #1F5BD8}
+.ck-agree{display:flex;align-items:center;gap:10px;min-height:52px;border:0;background:none;font:600 16px 'Noto Sans KR',sans-serif;cursor:pointer;text-align:left;padding:0}
+.ck-box{width:26px;height:26px;border-radius:7px;border:2px solid #D1D6DB;display:inline-flex;align-items:center;justify-content:center;color:#fff;font-weight:800;flex:none}.ck-agree.on .ck-box{background:#1F5BD8;border-color:#1F5BD8}
+.ck-note{margin:0;font-size:14px}
+.ck-f{padding:12px 18px 18px;border-top:1px solid #F2F4F6}
+.ck-pay{width:100%;min-height:58px;border:0;border-radius:14px;background:#1F5BD8;color:#fff;font:800 18px 'Noto Sans KR',sans-serif;cursor:pointer}.ck-pay.dis{background:#D1D6DB}
+.ck-dots{display:flex;gap:14px;margin:18px 0 8px}.ck-dots i{width:16px;height:16px;border-radius:50%;background:#E5E8EB}.ck-dots i.on{background:#191F28}
+.ck-pad{display:grid;grid-template-columns:repeat(3,1fr);background:#F7F8FA;padding:8px 8px 18px}.ck-pad button{min-height:62px;border:0;background:none;font:600 26px 'Noto Sans KR',sans-serif;border-radius:12px;cursor:pointer}.ck-pad button:active{background:#E5E8EB}
+.ck-center{align-items:center;justify-content:center;text-align:center;min-height:320px}
+.ck-spin{width:48px;height:48px;border-radius:50%;border:5px solid #E5E8EB;border-top-color:#1F5BD8;animation:ckspin .9s linear infinite}@keyframes ckspin{to{transform:rotate(360deg)}}
+.ck-ok{width:64px;height:64px;border-radius:50%;background:#E8F7EE;color:#12A150;font-size:32px;font-weight:800;display:flex;align-items:center;justify-content:center}.ck-ok.bad{background:#FDECEC;color:#E5484D}
+.inst{color:#1F5BD8;font-weight:700}
 </style>
 <style>
 /* 보드 화면 */
@@ -1735,6 +1761,70 @@ const _acc14=A.accept;A.accept=function(){if(!fcur()){toast('지금 수락할 �
   
   strip()};
 })();
+/* ===== fix17: '결제하기'를 누르면 결제창이 뜸 (연습용 결제창 · 실제 돈은 안 나감) ===== */
+let CK=null;
+function ckBooking(){return S.bookings.find(x=>x.status==='ACCEPTED')||active()||cur()}
+A.ckOpen=function(m,who){const b=ckBooking();if(!b){toast('결제할 수업이 없어요');return}CK={m,who,step:'review',pin:'',card:0,agree:false,b};ckDraw()};
+A.payOpen=function(el,m){A.ckOpen(m,'child')};
+A.ckSenior=function(){A.ckOpen(S.spayM||'kakao','senior')};
+A.spayM=function(el,m){S.spayM=m;render()};
+const _spay=P['s-pay'];P['s-pay']=()=>{const r=_spay();const cur=S.spayM||'kakao';
+ r.html=r.html.replace(/<div class="chips">[\s\S]*?<\/div>/,`<div class="chips">${[['kakao','카카오페이'],['card','카드로 결제']].map(([k,l])=>`<button type="button" class="chip ${cur===k?'on':''}" ${ACT('spayM',k)}>${l}</button>`).join('')}</div>`).replace(`ACT('pay','senior')`,`ACT('ckSenior')`).replace('data-act="pay"','data-act="ckSenior"');return r};
+function ckClose(){document.querySelector('.ck')?.remove();CK=null}
+function ckDraw(){if(!CK)return;const mm=PAYM.find(x=>x[0]===CK.m)||PAYM[0];const amt=won(fee(CK.b));let body='';
+ const head=(t,x=true)=>`<div class="ck-h"><b>${t}</b>${x?'<button type="button" class="ck-x" data-ck="close" aria-label="결제 닫기">✕</button>':''}</div>`;
+ const badge=`<span class="ck-m" style="background:${mm[2]};color:${mm[3]}">${mm[1].replace('신용·체크','')}</span>`;
+ if(CK.step==='review'){const cards=[['연습카드','0000'],['연습카드 (한도 초과)','1111']];
+  body=`${head('결제하기')}<div class="ck-b"><div class="ck-shop">${badge}<span><b>배프</b><br><span class="m">어머님 수업료</span></span></div>
+  <div class="ck-amt"><span class="m">결제 금액</span><b>${amt}</b></div>
+  <div class="ck-rows"><div><span>상품</span><b>${FR(CK.b.friend).name} 프렌드 수업 · 1시간</b></div><div><span>수업 일시</span><b>${when(CK.b)}</b></div><div><span>판매처</span><b>배프</b></div></div>
+  <b class="ck-t">${CK.m==='card'?'카드 선택':'결제 수단'}</b>
+  <div class="ck-cards">${cards.map(([n,d],i)=>`<button type="button" class="ck-card ${CK.card===i?'on':''}" data-ck="card" data-i="${i}"><span class="ck-chip"></span><span style="flex:1;text-align:left"><b>${CK.m==='card'?n:mm[1]+' · '+n}</b><br><span class="m">···· ${d}</span></span><span class="ck-rad"></span></button>`).join('')}</div>
+  ${CK.m==='card'?`<div class="ck-rows"><div><span>할부</span><b>일시불</b></div></div>`:''}
+  <button type="button" class="ck-agree ${CK.agree?'on':''}" data-ck="agree"><span class="ck-box">${CK.agree?'✓':''}</span>주문 내용을 확인했고, 결제에 동의해요</button>
+  <p class="m ck-note">수업 하루 전까지 취소하면 전액 환불돼요</p></div>
+  <div class="ck-f"><button type="button" class="ck-pay ${CK.agree?'':'dis'}" data-ck="next">${amt} 결제하기</button></div>`}
+ else if(CK.step==='pin'){const keys=['1','2','3','4','5','6','7','8','9','','0','del'];
+  body=`${head('결제 비밀번호')}<div class="ck-b" style="align-items:center;text-align:center">${badge}<b style="font-size:21px;margin-top:14px">결제 비밀번호 6자리를<br>눌러 주세요</b><span class="m">${amt} · 배프</span>
+  <div class="ck-dots">${[0,1,2,3,4,5].map(i=>`<i class="${i<CK.pin.length?'on':''}"></i>`).join('')}</div><span class="m" style="font-size:14px">연습 화면이라 아무 숫자나 눌러도 돼요</span></div>
+  <div class="ck-pad">${keys.map(k=>k?`<button type="button" data-ck="key" data-k="${k}" aria-label="${k==='del'?'지우기':k}">${k==='del'?'⌫':k}</button>`:'<span></span>').join('')}</div>`}
+ else if(CK.step==='wait'){body=`<div class="ck-b ck-center"><span class="ck-spin"></span><b style="font-size:20px">결제하고 있어요</b><span class="m">창을 닫지 말고 잠시만 기다려 주세요</span></div>`}
+ else if(CK.step==='done'){const t=new Date();body=`<div class="ck-b ck-center"><span class="ck-ok">✓</span><b style="font-size:22px">결제가 완료됐어요</b><div class="ck-rows" style="width:100%"><div><span>결제 금액</span><b>${amt}</b></div><div><span>결제 수단</span><b>${mm[1]}</b></div><div><span>승인 시각</span><b>${t.getMonth()+1}월 ${t.getDate()}일 ${String(t.getHours()).padStart(2,'0')}:${String(t.getMinutes()).padStart(2,'0')}</b></div></div></div><div class="ck-f"><button type="button" class="ck-pay" data-ck="finish">확인</button></div>`}
+ else if(CK.step==='fail'){body=`<div class="ck-b ck-center"><span class="ck-ok bad">!</span><b style="font-size:22px">결제가 안 됐어요</b><span class="m">카드 한도가 부족해요. 다른 카드나 결제 수단으로 다시 해 주세요</span></div><div class="ck-f"><button type="button" class="ck-pay" data-ck="failok">확인</button></div>`}
+ let d=document.querySelector('.ck');if(!d){d=document.createElement('div');d.className='ck';d.setAttribute('role','dialog');d.setAttribute('aria-label','결제창');document.body.appendChild(d);
+  d.addEventListener('click',e=>{const t=e.target.closest('[data-ck]');if(!t||!CK)return;const a=t.dataset.ck;
+   if(a==='close'){if(CK.step==='wait')return;ckClose();toast('결제를 닫았어요. 돈은 나가지 않았어요');return}
+   if(a==='card'){CK.card=+t.dataset.i}
+   if(a==='agree'){CK.agree=!CK.agree}
+   if(a==='next'){if(!CK.agree){toast('동의에 먼저 체크해 주세요');return}CK.step='pin';CK.pin=''}
+   if(a==='key'){const k=t.dataset.k;if(k==='del')CK.pin=CK.pin.slice(0,-1);else if(CK.pin.length<6)CK.pin+=k;
+    if(CK.pin.length===6){ckDraw();setTimeout(()=>{if(!CK)return;CK.step='wait';ckDraw();setTimeout(()=>{if(!CK)return;CK.step=CK.card===1?'fail':'done';ckDraw()},1300)},250);return}}
+   if(a==='finish'){const {m,who}=CK;ckClose();if(who==='child')A.payDone(null,m);else{S.spayM=m;A.pay(null,'senior')}return}
+   if(a==='failok'){const who=CK.who;ckClose();if(who==='child')go('c-payfail');else toast('결제가 안 됐어요. 다른 방법으로 다시 해 주세요');return}
+   ckDraw()})}
+ d.innerHTML=`<div class="ck-dim"></div><div class="ck-w">${body}</div>`;document.querySelector('.sheetbg')&&closeSheet()}
+/* ===== fix18: 프렌드가 미리 올려 둔 시간을 고르면 바로 매칭 (팀 결정: 프렌드 자동 수락 허용) ===== */
+if(S.friend&&S.friend.autoAccept===undefined)S.friend.autoAccept=true;
+const _slot18=A.slot;A.slot=function(el,a){S.draft.preset=true;return _slot18.apply(this,arguments)};
+const _day18=A.day;A.day=function(){S.draft.preset=false;return _day18.apply(this,arguments)};
+const _time18=A.time;A.time=function(){S.draft.preset=false;return _time18.apply(this,arguments)};
+const _sched18=P['s-schedule'];P['s-schedule']=()=>{const r=_sched18();const d=S.draft;
+ if(!S.params.cal&&d.preset===undefined)d.preset=true;
+ const instant=!S.params.cal&&d.preset!==false&&S.friend.autoAccept!==false;
+ r.html=r.html.replace(/(<button type="button" class="choice[^"]*" style="min-height:68px"[^>]*>)([\s\S]*?)(<small>)/g,(m,a,b,c)=>`${a}${b}${c}<span class="inst">⚡ 바로 매칭</span> · `)
+  .replace('<div class="body">',`<div class="body"><p class="m" style="margin:0;font-size:15px">⚡ 표시는 프렌드가 미리 올려 둔 시간이라, 고르면 기다리지 않고 바로 매칭돼요</p>`)
+  .replace('프렌드에게 요청 보내기',instant?'이 시간으로 바로 예약하기':'프렌드에게 요청 보내기');
+ if(S.params.cal)r.html=r.html.replace('</div><div class="chips">','<p class="m" style="margin:0;font-size:14px">달력에서 고른 시간은 프렌드가 확인한 뒤 확정돼요 (보통 12시간 안)</p></div><div class="chips">');
+ return r};
+const _send18=A.sendRequest;A.sendRequest=function(){const d=S.draft;const instant=d.preset!==false&&S.friend.autoAccept!==false;const n=S.bookings.length;
+ const r=_send18.apply(this,arguments);const b=S.bookings[S.bookings.length-1];
+ if(S.bookings.length>n&&b&&instant&&(b.status==='REQUESTED'||b.autoAccepted)){if(b.status==='REQUESTED'){const was=S.friendAs;S.friendAs=b.friend;const wr=S.role;try{A.accept()}catch(e){}S.friendAs=was;S.role=wr}b.autoAccepted=true;b.matchSeen=false;save();
+  document.querySelectorAll('.toast').forEach(e=>e.remove());
+  if(b.status==='ACCEPTED'||b.status==='CONFIRMED'){go(S.senior.childLinked?'s-home':'s-matched');toast(S.senior.childLinked?'바로 매칭됐어요. 자녀분께 결제 요청을 보냈어요':'바로 매칭됐어요. 결제하면 수업이 확정돼요')}}
+ return r};
+/* ===== fix19: 되돌리기 어려운 동작은 한 번 더 묻고, 끝나면 앞 화면으로 ===== */
+A.unlinkChild=function(){sheet(`<b style="font-size:20px">자녀분과 연결을 끊을까요?</b><p class="t m" style="margin:0">끊으면 결제 요청과 수업 리포트가 자녀분께 가지 않아요. 나중에 다시 연결할 수 있어요</p>${btn('연결 끊기',ACT('unlinkDo'),'danger')}${btn('그대로 둘게요',ACT('closeSheet'),'sec')}`)};
+A.unlinkDo=function(){S.senior.childLinked=false;closeSheet();save();goBack();toast('자녀분과 연결을 끊었어요')};
 render(); /* 마지막 수정까지 반영해 첫 화면 다시 그리기 */
 </script>
 <script>

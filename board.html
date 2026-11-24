@@ -832,7 +832,7 @@ const VT=()=>Object.entries(TOPICS).filter(([,t])=>!t.hide);
 const ACCOUNTS={baeum:{pw:'1234',role:'mentee',demo:true},friend:{pw:'1234',role:'mentor',demo:true},admin:{pw:'1234',role:'admin'}};
 /* 가입 계정 저장소 (아티팩트 데이터베이스 · baep_accounts/<아이디>) */
 let _dbp=null;
-const getDB=()=>{if(!_dbp)_dbp=(async()=>{try{if(!window.claude||!window.claude.use)return null;return await window.claude.use('db')}catch(e){return null}})();return Promise.race([_dbp,new Promise(r=>setTimeout(()=>r(null),6000))])};
+let getDB=()=>{if(!_dbp)_dbp=(async()=>{try{if(!window.claude||!window.claude.use)return null;return await window.claude.use('db')}catch(e){return null}})();return Promise.race([_dbp,new Promise(r=>setTimeout(()=>r(null),6000))])};
 setTimeout(getDB,0);
 const accRef=(db,id)=>db.doc('baep_accounts/'+id);
 async function findAcct(id){if(ACCOUNTS[id])return ACCOUNTS[id];const db=await getDB();if(!db)return null;
@@ -2015,8 +2015,9 @@ const seedBooking=()=>{S.tid='t1';S.day=TODAYN+4;S.slot='14:00';S.place='cafe';S
 render();
 </script>
 
+<script src="firebase-config.js"></script>
 <style>/* ===== 배프 v3 추가분 (v2 위에 덧붙임) ===== */
-body{word-break:keep-all;overflow-wrap:anywhere}
+body{word-break:keep-all;overflow-wrap:break-word}
 /* 작은 버튼 키우기 */
 #app .cal-nav{min-height:44px;padding:0 .9em}
 #app [data-a="tu-time"],#app [data-a="tu-wd"]{min-height:44px}
@@ -2114,11 +2115,22 @@ ACCOUNTS.baeum01=ACCOUNTS.baeum;ACCOUNTS.fr01=ACCOUNTS.friend;
 const LS='baep3_acc_';
 const lsGet=k=>{if(MODE==='frame')return null;try{return localStorage.getItem(k)}catch(e){return null}};
 const lsSet=(k,v)=>{if(MODE==='frame')return true;try{localStorage.setItem(k,v);return true}catch(e){return false}};
+/* Firebase: firebase-config.js에 설정이 있으면 Claude 저장소 대신 Firebase를 써요 (깃허브·Claude 링크가 같은 데이터를 봄) */
+const FB=window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.projectId?window.FIREBASE_CONFIG:null;
+window.__BAEP_STORE=FB?'firebase':'claude-or-local';
+if(FB&&MODE!=='frame'){let _fp=null;const V='10.12.2';const _cdb=getDB;
+ const js=src=>new Promise((ok,no)=>{const t=document.createElement('script');t.src=src;t.onload=ok;t.onerror=no;document.head.appendChild(t)});
+ getDB=()=>{if(!_fp)_fp=(async()=>{try{await js(`https://www.gstatic.com/firebasejs/${V}/firebase-app-compat.js`);await js(`https://www.gstatic.com/firebasejs/${V}/firebase-firestore-compat.js`);if(!firebase.apps.length)firebase.initializeApp(FB);return firebase.firestore()}catch(e){console.warn('Firebase 연결 실패 → Claude 저장소로',e);window.__BAEP_STORE='claude-or-local';return await _cdb()}})();return Promise.race([_fp,new Promise(r=>setTimeout(()=>r(null),9000))])};
+ setTimeout(getDB,0)}
+/* 비밀번호는 그대로 저장하지 않고 바꿔서(해시) 저장 */
+const HASH=async t=>{try{const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('baep:'+t));return 'h:'+[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')}catch(e){return t}};
 const _fa=findAcct,_sa=saveAcct;
-findAcct=async id=>{const a=await _fa(id);if(a)return a;const j=lsGet(LS+id);if(j){try{const o=JSON.parse(j);ACCOUNTS[id]=o;return o}catch(e){}}return null};
-saveAcct=async(id,a)=>{const ok=await _sa(id,a);if(ok)return true;return lsSet(LS+id,JSON.stringify(a))};
-S.seen=S.seen||{};try{Object.assign(S.seen,JSON.parse(lsGet('baep3_seen')||'{}'))}catch(e){}
-const seen=k=>{S.seen[k]=1;lsSet('baep3_seen',JSON.stringify(S.seen))};
+findAcct=async id=>{let a=await _fa(id);if(!a){const j=lsGet(LS+id);if(j){try{a=JSON.parse(j);ACCOUNTS[id]=a}catch(e){}}}
+ if(a&&String(a.pw||'').startsWith('h:')&&S.login&&S.login.busy){const v=(document.getElementById('lg-pw')||{}).value||'';if(v&&await HASH(v)===a.pw)return{...a,pw:v}}
+ return a||null};
+saveAcct=async(id,a)=>{if(a&&!a.demo&&a.pw&&!String(a.pw).startsWith('h:'))a={...a,pw:await HASH(a.pw)};const ok=await _sa(id,a);if(ok)return true;ACCOUNTS[id]=a;return lsSet(LS+id,JSON.stringify(a))};
+let SEEN={};try{SEEN=JSON.parse(lsGet('baep3_seen')||'{}')||{}}catch(e){}
+const seen=k=>{SEEN[k]=1;lsSet('baep3_seen',JSON.stringify(SEEN))};
 
 /* 알림 배너는 눌러서 닫기 */
 document.getElementById('noti').addEventListener('click',e=>{e.currentTarget.hidden=true});
@@ -2252,16 +2264,20 @@ const _sms=SC.sms;
 SC.sms=()=>_sms().replace(/<a class="sms-link" href="[^"]*" target="_blank" rel="noopener">[^<]*<\/a>/,'<button class="sms-link" data-a="sms-practice">baepu.kr/p/K7Q2</button>').replace('앱이 없어도 택시 연습 화면이 새 창으로 열려요','앱이 없어도 연습 화면이 열려요');
 
 /* ---------- 5. 안내 말풍선 ---------- */
-function coach(list,key){if(MODE!=='app'||S.seen[key]||document.querySelector('.co'))return;let i=0;
- const show=()=>{document.querySelector('.co')?.remove();const it=list[i];const el=[...phone().querySelectorAll(it.sel)].find(e=>e.offsetParent);
-  if(!el){i++;if(i<list.length)show();else seen(key);return}
-  el.scrollIntoView({block:'center'});const P=phone().getBoundingClientRect(),r=el.getBoundingClientRect();
+let CO=null;
+function coach(list,key){key=(S.me||'guest')+':'+key;if(MODE!=='app'||SEEN[key]||CO)return;
+ const c=CO={key,list,i:0,screen:S.screen,ready:false};
+ const done=()=>{document.querySelector('.co')?.remove();if(CO===c)CO=null;seen(key)};
+ c.show=()=>{if(CO!==c)return;document.querySelector('.co')?.remove();const it=list[c.i];const el=[...phone().querySelectorAll(it.sel)].find(e=>e.offsetParent);
+  if(!el){c.i++;if(c.i<list.length)c.show();else done();return}
+  if(!c.scrolled){el.scrollIntoView({block:'center'});c.scrolled=c.i}else if(c.scrolled!==c.i){el.scrollIntoView({block:'center'});c.scrolled=c.i}
+  const P=phone().getBoundingClientRect(),r=el.getBoundingClientRect();
   const d=document.createElement('div');d.className='co';const pad=6;const below=(r.bottom-P.top)<P.height*.55;
   d.innerHTML=`<div class="co-hole" style="left:${r.left-P.left-pad}px;top:${r.top-P.top-pad}px;width:${r.width+pad*2}px;height:${r.height+pad*2}px"></div>
-  <div class="co-bub" style="${below?`top:${r.bottom-P.top+16}px`:`bottom:${P.bottom-r.top+16}px`}"><p>${it.text}</p><div class="co-row"><button class="co-skip">그만 보기</button><small>${i+1} / ${list.length}</small><button class="co-next">${i===list.length-1?'알겠어요':'다음'}</button></div></div>`;
-  d.addEventListener('click',e=>{if(e.target.closest('.co-skip')){d.remove();seen(key);return}if(e.target.closest('.co-next')){d.remove();i++;if(i<list.length)show();else seen(key)}});
-  phone().appendChild(d)};
- setTimeout(show,450)}
+  <div class="co-bub" style="${below?`top:${r.bottom-P.top+16}px`:`bottom:${P.bottom-r.top+16}px`}"><p>${it.text}</p><div class="co-row"><button class="co-skip">그만 보기</button><small>${c.i+1} / ${list.length}</small><button class="co-next">${c.i===list.length-1?'알겠어요':'다음'}</button></div></div>`;
+  d.addEventListener('click',e=>{if(e.target.closest('.co-skip')){done();return}if(e.target.closest('.co-next')){c.i++;if(c.i<list.length)c.show();else done()}});
+  phone().appendChild(d);c.ready=true};
+ setTimeout(c.show,450)}
 const tabSel=n=>`.tabbar button:nth-child(${n})`;
 function guides(){if(MODE!=='app')return;const sc=S.screen;
  if(sc==='home'&&hstate()==='first')coach([
@@ -2286,11 +2302,12 @@ render=function(){_render();
  if(S.screen==='splash'){const f=document.querySelector('.spl iframe');if(f&&!f.srcdoc)f.srcdoc=SPLASH3D}
  if(!['pay'].includes(S.screen)&&CK){CK=null;drawCk()}
  if(S.screen!=='practice'&&document.querySelector('.pxo')&&!['practice','home'].includes(S.screen))document.querySelector('.pxo').remove();
- document.querySelector('.co')&&document.querySelector('.co').remove();
+ if(CO&&CO.screen!==S.screen){document.querySelector('.co')?.remove();if(CO.ready)seen(CO.key);CO=null}
+ else if(CO&&CO.ready)CO.show();
  guides()};
 
 /* 시작 화면 */
-if(MODE==='app'){if(Q.has('new')){try{Object.keys(localStorage).filter(k=>k.startsWith('baep3_')).forEach(k=>localStorage.removeItem(k))}catch(e){}history.replaceState(null,'',location.pathname);S.seen={}}if(S.screen==='join')S.screen='splash';render()}
+if(MODE==='app'){if(Q.has('new')){try{Object.keys(localStorage).filter(k=>k.startsWith('baep3_')).forEach(k=>localStorage.removeItem(k))}catch(e){}history.replaceState(null,'',location.pathname);SEEN={}}if(S.screen==='join')S.screen='splash';render()}
 })();
 
 /* ===== 한 화면 보기(?s=) 상태 만들기 + 전체 화면 보기 보드 ===== */

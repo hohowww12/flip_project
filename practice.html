@@ -1849,7 +1849,7 @@ render(); /* 마지막 수정까지 반영해 첫 화면 다시 그리기 */
    go=function(pg,params){if(pg==='p-run'||pg==='p-start'){return _go(pg,params)}if(pg==='p-result'){_go(pg,params);const r=S.lastResult||{};post({t:'result',k:r.k,solo:!!r.solo,hints:r.hints||0,mist:r.mist||0});return}post({t:'close'})};}
   if(q.get('run')){go('p-run',{k:q.get('run'),mode:q.get('mode')||'practice',step:0,st:{},t0:Date.now()})}
   else if(p.startsWith('p-start-'))go('p-start',{k:p.slice(8)});else go(p);
-  setTimeout(()=>document.querySelectorAll('.coach').forEach(e=>e.remove()),400);return}
+  if(!q.has('embed'))setTimeout(()=>document.querySelectorAll('.coach').forEach(e=>e.remove()),400);return}
  if(M!=='board')return;
  const PCROLE=new Set(['admin']);const PCP=new Set(['w-landing','c-login']);
  const extra={'배움님':[['s-home','홈 · 요청 보낸 뒤','req'],['s-home','홈 · 프렌드 수락','accepted'],['s-home','홈 · 결제 끝남','paid'],['s-home','홈 · 수업 당일','today'],['s-home','홈 · 수업 끝남','done']],

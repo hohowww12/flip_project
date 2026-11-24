@@ -2296,6 +2296,8 @@ function guides(){if(MODE!=='app')return;const sc=S.screen;
   {sel:'[data-a="t-edit"], [data-v="tguide"]',text:'<b>열어둔 시간에는 바로 수락돼요</b><br>등록할 때 고른 요일·시간에 들어온 예약은 자동으로 수락돼요. 다른 시간 요청만 직접 수락·거절해요'}],'g_thome');
 }
 
+/* 로그아웃하면 이 폰에 남은 '내 프렌드 카드'를 지워서, 같은 폰으로 배움님 계정에 들어가도 목록에 두 번 뜨지 않게 */
+const _logo=A.logo;A.logo=(...x)=>{for(let i=TUTORS.length-1;i>=0;i--)if(TUTORS[i].id==='me')TUTORS.splice(i,1);return _logo(...x)};
 /* ---------- render 감싸기 ---------- */
 const _render=render;
 render=function(){_render();
